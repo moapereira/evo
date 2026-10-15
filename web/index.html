@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evo</title>
+<style>
+  :root {
+    --marca:#2f6bff; --marca-d:#1b4fd6; --azul:#38bdf8; --azul-d:#0ea5e9; --laranja:#ff9600; --laranja-d:#d98100;
+    --vermelho:#ff4b4b; --vermelho-d:#ea2b2b; --ciano:#22d3ee; --ciano-d:#0891b2; --roxo:#818cf8;
+    --txt:#1e2a44; --mut:#6b7a99; --linha:#dbe5f6; --fundo:#f2f6ff; --card:#fff; --z:1;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fundo); color:var(--txt); font:600 15px/1.35 "Nunito","Segoe UI Rounded","Trebuchet MS",system-ui,sans-serif; }
+  h2 { margin:0 0 8px; font-size:16px; font-weight:800; display:flex; justify-content:space-between; align-items:center; gap:8px; flex:none; }
+  .sub { color:var(--mut); font-size:13px; font-weight:700; }
+
+  /* topo, estilo Duolingo */
+  header { position:sticky; top:0; z-index:5; background:#fff; border-bottom:2px solid var(--linha); display:flex; align-items:center; gap:18px; padding:10px 24px; flex-wrap:wrap; }
+  .marca { font-weight:900; font-size:24px; color:var(--marca); letter-spacing:.02em; margin-right:auto; cursor:pointer; }
+  .pilula { display:flex; align-items:center; gap:6px; font-weight:900; font-size:17px; }
+  .pilula.fogo { color:var(--laranja); } .pilula.xp { color:var(--ciano-d); }
+  .pilula .ic { font-size:22px; }
+  .coracoes { display:flex; gap:2px; font-size:20px; }
+  .coracao.vazio { filter:grayscale(1); opacity:.35; }
+  .coracao.ganhou { animation:estoura .6s; }
+  .coracao.perdeu { animation:balanca .5s; }
+  .nivel { display:flex; align-items:center; gap:8px; }
+  #status { color:var(--mut); font-size:12px; font-weight:700; }
+  #status a { color:var(--mut); margin-left:8px; }
+  .subir { cursor:pointer; background:var(--fundo); border:2px solid var(--linha); border-radius:8px; padding:0 6px; font-size:13px; flex:none; }
+  .subir:hover { border-color:var(--azul); }
+
+  main { max-width:1180px; margin:0 auto; padding:20px 16px 40px; display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
+  .card { background:var(--card); border:2px solid var(--linha); border-bottom-width:5px; border-radius:18px; padding:16px 18px; min-width:0; }
+  .c12 { grid-column:span 12; } .c3 { grid-column:span 3; } .c7 { grid-column:span 7; } .c6 { grid-column:span 6; } .c5 { grid-column:span 5; } .c4 { grid-column:span 4; }
+  @media (max-width:900px), (orientation:portrait) { .c7,.c6,.c5,.c4,.c3 { grid-column:span 12; } header { padding:10px 14px; gap:12px; } }
+
+  .barra { height:14px; background:var(--linha); border-radius:99px; overflow:hidden; position:relative; }
+  .barra > i { display:block; height:100%; border-radius:99px; background:var(--marca); width:0; transition:width 1s cubic-bezier(.2,.8,.2,1); position:relative; }
+  .barra > i::after { content:""; position:absolute; left:8px; right:8px; top:3px; height:4px; border-radius:99px; background:rgba(255,255,255,.35); }
+  .barra.azul > i { background:var(--azul); } .barra.ciano > i { background:var(--ciano); }
+
+  /* herói: mascote + meta */
+  .heroi { display:flex; align-items:center; gap:24px; flex-wrap:wrap; justify-content:center; }
+  .mascote-box { display:flex; align-items:center; gap:10px; flex:1 1 360px; min-width:0; }
+  .balao { position:relative; background:#fff; border:2px solid var(--linha); border-radius:16px; padding:12px 16px; font-weight:800; font-size:17px; max-width:300px; min-height:56px; display:flex; align-items:center; animation:aparece .4s; }
+  .balao::before { content:""; position:absolute; left:-10px; top:50%; width:16px; height:16px; background:#fff; border-left:2px solid var(--linha); border-bottom:2px solid var(--linha); transform:translateY(-50%) rotate(45deg); }
+  #mascote { width:130px; flex:none; animation:pula 2.4s ease-in-out infinite; }
+  #mascote .olho { transform-origin:center; transform-box:fill-box; animation:pisca 4s infinite; }
+  #mascote .pupilas { transition:transform .3s; }
+  #mascote .boca { transform-origin:center; transform-box:fill-box; fill:none; stroke:#1b4fd6; stroke-width:3.5; stroke-linecap:round; stroke-linejoin:round; }
+  #mascote.falando .boca { animation:fala .25s infinite alternate; }
+  /* expressões: o JS troca data-humor conforme a mensagem */
+  #mascote .sobr, #mascote .olhos-alegres path { fill:none; stroke:#1e2a44; stroke-width:4; stroke-linecap:round; }
+  #mascote .sobr { transform-box:fill-box; transform-origin:center; transition:transform .35s; }
+  #mascote .olhos-alegres, #mascote .bochecha, #mascote .gota, #mascote .lagrima, #mascote .duvida { display:none; }
+  #mascote .duvida { font:900 22px "Nunito","Segoe UI",sans-serif; fill:#1b4fd6; }
+  #mascote .bola { transition:fill .3s; }
+  #mascote[data-humor="animado"] { animation:pulaAlto .8s ease-in-out infinite; }
+  #mascote[data-humor="animado"] .olho { display:none; }
+  #mascote[data-humor="animado"] .olhos-alegres, #mascote[data-humor="animado"] .bochecha { display:inline; }
+  #mascote[data-humor="animado"] .sobr { transform:translateY(-4px); }
+  #mascote[data-humor="animado"] .boca { fill:#1b4fd6; }
+  #mascote[data-humor="animado"] .bola { fill:#fde047; }
+  #mascote[data-humor="preocupado"] { animation:treme .5s ease-in-out infinite; }
+  #mascote[data-humor="preocupado"] .sobr-e { transform:rotate(-14deg); }
+  #mascote[data-humor="preocupado"] .sobr-d { transform:rotate(14deg); }
+  #mascote[data-humor="preocupado"] .gota { display:inline; animation:cai 1.6s ease-in infinite; }
+  #mascote[data-humor="triste"] { animation:afunda 3s ease-in-out infinite; }
+  #mascote[data-humor="triste"] .sobr-e { transform:rotate(-22deg) translateY(2px); }
+  #mascote[data-humor="triste"] .sobr-d { transform:rotate(22deg) translateY(2px); }
+  #mascote[data-humor="triste"] .pupilas { transform:translateY(3px); }
+  #mascote[data-humor="triste"] .lagrima { display:inline; animation:cai 2s ease-in infinite; }
+  #mascote[data-humor="triste"] .bola { fill:#94a3b8; }
+  #mascote[data-humor="pensativo"] .sobr-e { transform:translateY(-5px); }
+  #mascote[data-humor="pensativo"] .pupilas { transform:translate(4px,-3px); }
+  #mascote[data-humor="pensativo"] .duvida { display:inline; }
+  .anel-box { position:relative; width:170px; height:170px; flex:none; }
+  .anel-box svg { transform:rotate(-90deg); width:100%; height:100%; }
+  .anel-fundo { stroke:var(--linha); } .anel { stroke:var(--marca); stroke-linecap:round; transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1); }
+  .anel.cheio { stroke:var(--ciano); }
+  .anel-txt { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  .anel-txt b { font-size:38px; font-weight:900; line-height:1; } .anel-txt span { color:var(--mut); font-size:12px; font-weight:800; text-transform:uppercase; }
+  .valor-box { text-align:center; }
+  .valor-box .grande { font-size:32px; font-weight:900; color:var(--marca-d); }
+
+  /* missões */
+  .missao { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:2px solid var(--linha); }
+  .missao:first-of-type { border-top:0; }
+  .missao .ic { font-size:28px; width:42px; height:42px; display:flex; align-items:center; justify-content:center; background:var(--fundo); border-radius:12px; flex:none; }
+  .missao .meio { flex:1; min-width:0; } .missao .nome { font-weight:800; display:flex; justify-content:space-between; gap:8px; }
+  .missao .meio .barra { margin-top:6px; }
+  .check { width:28px; height:28px; border-radius:50%; border:3px solid var(--linha); flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; }
+  .missao.feita .check { background:var(--marca); border-color:var(--marca-d); animation:estoura .5s; }
+
+  /* gráfico de barras por hora */
+  .grafico { display:flex; align-items:flex-end; gap:6px; height:170px; padding-top:20px; }
+  .col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0; }
+  .col .n { font-size:12px; font-weight:900; height:18px; color:var(--mut); }
+  .col .haste { width:100%; max-width:34px; background:var(--linha); border-radius:8px 8px 0 0; height:4px; transition:height .9s cubic-bezier(.2,.8,.2,1); }
+  .col.tem .haste { background:var(--marca); border-bottom:4px solid var(--marca-d); } .col.agora .haste { background:var(--azul); border-bottom-color:var(--azul-d); }
+  .col.agora .h { color:var(--azul-d); } .col .h { font-size:11px; font-weight:800; color:var(--mut); margin-top:4px; }
+
+  /* feed de vendas */
+  .lista { list-style:none; margin:0; padding:0; }
+  .linha { display:flex; align-items:center; gap:12px; padding:9px 0; border-top:2px solid var(--linha); }
+  .linha:first-child { border-top:0; }
+  .linha .corpo { flex:1; min-width:0; } .linha .t { font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .linha .sub { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; flex:none; }
+  .medalha { font-size:24px; width:30px; text-align:center; }
+  .valor { font-weight:900; color:var(--marca-d); white-space:nowrap; }
+  .novo { animation:desliza .6s cubic-bezier(.2,.8,.2,1), brilho 2s; }
+  .vazio { color:var(--mut); text-align:center; padding:18px 8px; }
+  .vazio.bom { color:var(--marca-d); font-weight:900; }
+
+  /* suporte (rosca) e funil (barras) */
+  .rosca-box { display:flex; align-items:center; gap:16px; margin-bottom:8px; }
+  .rosca { width:110px; height:110px; position:relative; flex:none; }
+  .rosca svg { transform:rotate(-90deg); width:100%; height:100%; } .rosca circle { fill:none; stroke-width:14; }
+  .rosca .ok { stroke:var(--marca); stroke-linecap:round; transition:stroke-dasharray 1s ease; } .rosca .ruim { stroke:var(--vermelho); }
+  .rosca .meio { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:900; font-size:26px; line-height:1; }
+  .rosca .meio small { font-size:10px; color:var(--mut); font-weight:800; text-transform:uppercase; }
+  .legenda { font-weight:800; } .legenda i { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; }
+  .etapa { margin:10px 0; } .etapa .topo { display:flex; justify-content:space-between; gap:8px; font-weight:800; margin-bottom:4px; }
+  .etapa .topo span:first-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pilha { display:flex; height:16px; border-radius:99px; overflow:hidden; background:var(--linha); }
+  .pilha i { display:block; height:100%; transition:width 1s cubic-bezier(.2,.8,.2,1); width:0; } .pilha .v { background:var(--marca); } .pilha .r { background:var(--vermelho); }
+  .tempo { background:var(--vermelho); color:#fff; border-radius:99px; padding:2px 10px; font-size:13px; font-weight:900; white-space:nowrap; }
+  .tempo.med { background:var(--laranja); } .tempo.cinza { background:#afafaf; } .tempo.ok { background:var(--marca); }
+  .mais { color:var(--mut); font-size:13px; text-align:center; padding-top:6px; font-weight:800; list-style:none; }
+  .aviso-fonte { background:#fff4e5; color:#a35a00; border:2px solid #ffd9a0; border-radius:12px; padding:6px 12px; margin-bottom:8px; font-size:13px; font-weight:800; flex:none; }
+
+  /* chat */
+  #log { max-height:160px; overflow:auto; margin-bottom:10px; } #log p { margin:5px 0; } #log .eu { color:var(--mut); }
+  form { display:flex; gap:10px; }
+  input { flex:1; min-width:0; border:2px solid var(--linha); border-radius:14px; padding:12px 14px; font:inherit; background:var(--fundo); }
+  input:focus { outline:none; border-color:var(--azul); }
+  .btn { border:0; border-bottom:4px solid var(--marca-d); background:var(--marca); color:#fff; border-radius:14px; padding:12px 20px; font:inherit; font-weight:900; text-transform:uppercase; letter-spacing:.04em; cursor:pointer; }
+  .btn:active { transform:translateY(3px); border-bottom-width:1px; }
+  .btn.mic { background:var(--azul); border-bottom-color:var(--azul-d); } .btn.mic.on { background:var(--vermelho); border-bottom-color:var(--vermelho-d); animation:pulsa 1s infinite; }
+
+  #confete { position:fixed; inset:0; pointer-events:none; z-index:50; }
+
+  /* ===== MODO MONITOR (paisagem): uma tela só, sem rolagem, escalada por --z a partir de 1280x720 ===== */
+  body.tv { zoom:var(--z); width:calc(100vw / var(--z)); height:calc(100vh / var(--z)); overflow:hidden; display:flex; flex-direction:column; }
+  .tv #confete { zoom:calc(1 / var(--z)); }
+  .tv header { position:static; flex:none; padding:4px 18px; gap:16px; flex-wrap:nowrap; }
+  .tv .marca { font-size:22px; }
+  .tv main { flex:1; min-height:0; max-width:none; width:100%; margin:0; padding:10px 14px 4px; gap:10px;
+    grid-template-rows:minmax(0,1.05fr) minmax(0,1.15fr) minmax(0,1.3fr) auto; }
+  .tv .card { min-height:0; overflow:hidden; display:flex; flex-direction:column; padding:10px 14px; border-radius:16px; }
+  .tv .c3 { grid-column:span 3; } .tv .c7 { grid-column:span 7; } .tv .c6 { grid-column:span 6; } .tv .c5 { grid-column:span 5; } .tv .c4 { grid-column:span 4; }
+  .tv h2 { font-size:15px; margin-bottom:6px; }
+  .tv .fit { flex:1; min-height:0; overflow:hidden; }
+  .tv .heroi { flex:1; flex-wrap:nowrap; gap:16px; justify-content:space-around; min-height:0; }
+  .tv .mascote-box { flex:1 1 auto; }
+  .tv #mascote { width:84px; } .tv .balao { font-size:16px; padding:10px 14px; min-height:0; max-width:260px; }
+  .tv .anel-box { width:108px; height:108px; } .tv .anel-txt b { font-size:26px; } .tv .anel-txt span { font-size:10px; }
+  .tv .valor-box .grande { font-size:28px; }
+  .tv #card-missoes { justify-content:flex-start; }
+  .tv #missoes { flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-around; }
+  .tv .missao { padding:2px 0; gap:10px; } .tv .missao .ic { width:30px; height:30px; font-size:18px; border-radius:9px; } .tv .missao .meio .barra { height:10px; margin-top:3px; } .tv .check { width:22px; height:22px; border-width:2px; font-size:13px; }
+  .tv .grafico { flex:1; height:auto; min-height:0; padding-top:4px; }
+  .tv .linha { padding:4px 0; gap:10px; } .tv .avatar { width:32px; height:32px; font-size:13px; } .tv .medalha { font-size:20px; }
+  .tv .vazio { padding:10px 6px; }
+  .tv .mais { padding-top:2px; font-size:11px; line-height:14px; }
+  .tv .corpo2 { display:flex; flex:1; min-height:0; gap:14px; }
+  .tv .corpo2 > * { min-height:0; }
+  .tv .rosca-box { flex:none; flex-direction:column; justify-content:center; margin:0; gap:6px; width:120px; }
+  .tv .rosca { width:90px; height:90px; } .tv .rosca .meio { font-size:22px; }
+  .tv #etapas { flex:1; min-width:0; } .tv #funil { flex:1; min-width:0; }
+  .tv .etapa { margin:5px 0; } .tv .pilha { height:12px; }
+  .tv #chat { padding:6px 12px; flex-direction:row; align-items:center; gap:12px; } .tv #chat h2 { display:none; }
+  .tv #log { display:none; } .tv form { flex:1; } .tv .btn, .tv input { padding:7px 14px; }
+  .tv #chat .falou { flex:none; max-width:46%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* ===== pop-up com a lista completa ===== */
+  .card[data-detalhe] { cursor:pointer; transition:border-color .15s, transform .15s; }
+  .card[data-detalhe]:hover, .card[data-detalhe]:focus-visible { border-color:var(--azul); outline:none; }
+  .card[data-detalhe]:active { transform:translateY(2px); }
+  .modal-fundo { position:fixed; inset:0; z-index:60; background:rgba(20,35,70,.45); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .modal-fundo[hidden] { display:none; }
+  .modal { background:#fff; border:2px solid var(--linha); border-bottom-width:5px; border-radius:18px; width:min(1000px, calc(96vw / var(--z))); max-height:calc(90vh / var(--z)); display:flex; flex-direction:column; animation:aparece .2s; }
+  .modal-topo { display:flex; gap:12px; align-items:center; padding:14px 18px; border-bottom:2px solid var(--linha); flex:none; }
+  .modal-topo h2 { margin:0; font-size:18px; flex:1; min-width:0; }
+  .modal-topo input { flex:0 1 240px; padding:8px 12px; }
+  .modal-fechar { border:2px solid var(--linha); background:var(--fundo); border-radius:10px; width:36px; height:36px; font:inherit; font-weight:900; cursor:pointer; color:var(--mut); flex:none; }
+  .modal-fechar:hover { border-color:var(--azul); color:var(--txt); }
+  .modal-resumo { padding:8px 18px 0; color:var(--mut); font-weight:800; flex:none; }
+  .modal-corpo { overflow:auto; padding:4px 18px 16px; min-height:0; }
+  .modal table { width:100%; border-collapse:collapse; }
+  .modal th { position:sticky; top:0; background:#fff; text-align:left; cursor:pointer; user-select:none; color:var(--mut); font-size:12px; text-transform:uppercase; letter-spacing:.04em; padding:10px 8px; border-bottom:2px solid var(--linha); white-space:nowrap; }
+  .modal th:hover { color:var(--txt); }
+  .modal td { padding:8px; border-bottom:1px solid var(--linha); vertical-align:top; }
+  .modal th.num, .modal td.num { text-align:right; white-space:nowrap; }
+  .modal tr:hover td { background:var(--fundo); }
+  .modal .vazio-modal { color:var(--mut); text-align:center; padding:32px 8px; }
+  .tv .modal-fundo { zoom:calc(1 / var(--z)); }
+  .tv .modal { zoom:var(--z); }
+
+  /* ===== segunda tela (alterna sozinha com a principal) ===== */
+  .tela[hidden] { display:none; }
+  .grande-num { font-size:34px; font-weight:900; color:var(--marca-d); line-height:1.1; flex:none; }
+  .grande-num.ruim { color:var(--vermelho-d); }
+  .stats { display:flex; gap:10px; margin:4px 0 8px; flex:none; }
+  .stat { flex:1; background:var(--fundo); border:2px solid var(--linha); border-radius:12px; padding:6px 10px; text-align:center; }
+  .stat b { display:block; font-size:22px; font-weight:900; color:var(--marca-d); line-height:1.1; }
+  .stat span { font-size:11px; font-weight:800; color:var(--mut); text-transform:uppercase; letter-spacing:.04em; }
+  .stat.alerta b { color:var(--laranja-d); }
+  #telas { display:flex; gap:6px; align-items:center; }
+  #telas i { width:10px; height:10px; border-radius:50%; background:var(--linha); cursor:pointer; transition:background .3s, transform .3s; }
+  #telas i.ativa { background:var(--marca); transform:scale(1.25); }
+  #telas.pausado i.ativa { background:var(--laranja); }
+  .tv #tela2 { grid-template-rows:minmax(0,1.15fr) minmax(0,1fr); }
+  .tv .grande-num { font-size:28px; }
+  .tv .stat { padding:3px 8px; } .tv .stat b { font-size:18px; }
+  .tv .tela:not([hidden]) { animation:aparece .5s; }
+  @keyframes pulaAlto { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+  @keyframes treme { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)} }
+  @keyframes afunda { 0%,100%{transform:translateY(2px)} 50%{transform:translateY(5px)} }
+  @keyframes cai { 0%{transform:translateY(-3px);opacity:0} 30%{opacity:1} 100%{transform:translateY(12px);opacity:0} }
+  @keyframes pula { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  @keyframes pisca { 0%,94%,100%{transform:scaleY(1)} 97%{transform:scaleY(.1)} }
+  @keyframes fala { to { transform:scaleY(1.6) } }
+  @keyframes aparece { from{opacity:0;transform:translateX(-10px)} }
+  @keyframes estoura { 0%{transform:scale(.3)} 60%{transform:scale(1.35)} 100%{transform:scale(1)} }
+  @keyframes balanca { 25%{transform:rotate(-20deg)} 75%{transform:rotate(20deg)} }
+  @keyframes desliza { from{opacity:0;transform:translateX(-30px)} }
+  @keyframes brilho { 0%,50%{background:#e8f1ff} }
+  @keyframes pulsa { 50%{transform:scale(1.06)} }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="marca" id="marca" title="Clique (ou tecle F) para tela cheia">evo</div>
+  <div class="pilula fogo" title="Dias úteis seguidos batendo as metas do dia"><span class="ic">🔥</span><span id="seq">0</span></div>
+  <div class="pilula xp" id="nivel-pilula"><span class="ic">⭐</span><span>Nível <span id="nivel">1</span></span></div>
+  <div class="coracoes" id="coracoes"></div>
+  <span class="sub" id="cor-total"></span>
+  <div id="telas" title="Telas: as setas ← → trocam; o painel alterna sozinho a cada 20 s"></div>
+  <div id="status">conectando…</div><a href="/sair" style="font-size:12px;color:var(--mut)">sair</a>
+</header>
+
+<main id="tela1" class="tela">
+  <section class="card c7" data-detalhe="reunioes">
+    <div class="heroi">
+      <div class="mascote-box">
+        <svg id="mascote" data-humor="feliz" viewBox="0 0 120 130" aria-label="Mascote Evo">
+          <line x1="60" y1="14" x2="60" y2="4" stroke="#1b4fd6" stroke-width="4" stroke-linecap="round"/>
+          <circle class="bola" cx="60" cy="6" r="6" fill="#22d3ee"/>
+          <ellipse cx="60" cy="76" rx="52" ry="48" fill="#2f6bff"/>
+          <ellipse cx="60" cy="92" rx="38" ry="28" fill="#7aa2ff"/>
+          <ellipse class="bochecha" cx="26" cy="82" rx="8" ry="5" fill="#ff8fb1"/><ellipse class="bochecha" cx="94" cy="82" rx="8" ry="5" fill="#ff8fb1"/>
+          <ellipse cx="42" cy="62" rx="15" ry="18" fill="#fff"/><ellipse cx="78" cy="62" rx="15" ry="18" fill="#fff"/>
+          <g class="olho"><g class="pupilas"><circle cx="45" cy="64" r="7" fill="#1e2a44"/><circle cx="75" cy="64" r="7" fill="#1e2a44"/><circle cx="47" cy="61" r="2.5" fill="#fff"/><circle cx="77" cy="61" r="2.5" fill="#fff"/></g></g>
+          <g class="olhos-alegres"><path d="M32 67 Q42 52 52 67"/><path d="M68 67 Q78 52 88 67"/></g>
+          <path class="sobr sobr-e" d="M28 41 Q40 34 54 41"/><path class="sobr sobr-d" d="M66 41 Q80 34 92 41"/>
+          <path d="M52 82 L68 82 L60 94 Z" fill="#ff9600"/>
+          <path class="boca" d="M50 100 Q60 108 70 100"/>
+          <path class="gota" d="M101 36 q5 8 0 12 q-5 -4 0 -12z" fill="#7dd3fc"/>
+          <path class="lagrima" d="M33 80 q4 7 0 10 q-4 -3 0 -10z" fill="#7dd3fc"/>
+          <text class="duvida" x="96" y="30">?</text>
+        </svg>
+        <div class="balao" id="balao">Olá! Estou carregando os números…</div>
+      </div>
+      <div class="anel-box">
+        <svg viewBox="0 0 120 120"><circle class="anel-fundo" cx="60" cy="60" r="52" fill="none" stroke-width="14"/><circle class="anel" id="anel" cx="60" cy="60" r="52" fill="none" stroke-width="14" stroke-dasharray="326.7" stroke-dashoffset="326.7"/></svg>
+        <div class="anel-txt"><b><span id="v-qtd">0</span>/<span id="v-meta">0</span></b><span>reuniões feitas</span></div>
+      </div>
+      <div class="valor-box"><div class="sub">Reuniões hoje</div><div class="grande" id="v-total-reun">0</div><div class="sub" id="v-falta"></div><div class="sub" id="v-valor-linha">Fechado hoje: <b id="v-valor">R$ 0</b></div></div>
+    </div>
+  </section>
+  <section class="card c5" id="card-missoes"><h2>Missões do dia <span class="sub" id="m-resumo"></span></h2><div id="missoes"></div></section>
+
+  <section class="card c4" data-detalhe="reunioes"><h2>Reuniões por hora <span class="sub" id="g-sub">hoje</span></h2><div id="aviso-reunioes"></div><div class="grafico" id="grafico"></div></section>
+  <section class="card c4" data-detalhe="vendas"><h2>Vendas fechadas hoje <span class="sub" id="f-n"></span></h2><div id="aviso-vendas"></div><ul class="lista fit" id="feed"></ul></section>
+  <section class="card c4" data-detalhe="instancias"><h2><span>📨 Sem msgs oficiais</span> <span class="sub" id="i-sub"></span><label class="subir" title="Enviar a planilha exportada do painel de instâncias (.xlsx ou .csv)">⬆<input type="file" id="arquivo" accept=".xlsx,.csv" hidden></label></h2><div id="aviso-instancias"></div><ul class="lista fit" id="instancias"></ul></section>
+
+  <section class="card c6" data-detalhe="suporte">
+    <h2>Suporte <span class="sub">abertos há mais de <span id="lim-s">24</span>h</span></h2>
+    <div id="aviso-suporte"></div>
+    <div class="corpo2">
+      <div class="rosca-box">
+        <div class="rosca"><svg viewBox="0 0 120 120"><circle class="ruim" cx="60" cy="60" r="46"/><circle class="ok" id="rosca-ok" cx="60" cy="60" r="46" stroke-dasharray="0 289"/></svg><div class="meio"><span id="s-atras">0</span><small>atrasados</small></div></div>
+        <div class="legenda"><div><i style="background:var(--marca)"></i><span id="s-dia">0</span> em dia</div><div><i style="background:var(--vermelho)"></i><span id="s-atras2">0</span> atrasados</div></div>
+      </div>
+      <ul class="lista fit" id="suporte"></ul>
+    </div>
+  </section>
+  <section class="card c6" data-detalhe="funil">
+    <h2>Funil de implantação <span class="sub">parados há mais de <span id="lim-f">48</span>h</span></h2>
+    <div id="aviso-funil"></div>
+    <div class="corpo2">
+      <div id="etapas" class="fit"></div>
+      <ul class="lista fit" id="funil"></ul>
+    </div>
+  </section>
+
+  <section class="card c12" id="chat">
+    <h2>Pergunte ao Evo <span class="sub">digite ou use o microfone</span></h2>
+    <div id="log"></div>
+    <form id="form">
+      <button type="button" class="btn mic" id="mic" title="Falar">🎤</button>
+      <input id="pergunta" placeholder="Ex.: quem está parado no funil?" autocomplete="off">
+      <button class="btn">Enviar</button>
+    </form>
+  </section>
+</main>
+<main id="tela2" class="tela" hidden>
+  <section class="card c4" data-detalhe="financeiro">
+    <h2><span>💰 Travado no financeiro</span> <span class="sub" id="fin-sub"></span></h2>
+    <div id="aviso-negocio"></div>
+    <div class="grande-num" id="fin-valor">R$ 0</div>
+    <div class="sub" id="fin-detalhe"></div>
+    <ul class="lista fit" id="fin-lista"></ul>
+  </section>
+  <section class="card c4" data-detalhe="pipeline">
+    <h2><span>📈 Pipeline em aberto</span> <span class="sub" id="pip-sub"></span></h2>
+    <div class="grande-num" id="pip-valor">R$ 0</div>
+    <div class="sub" id="pip-detalhe"></div>
+    <div id="pip-etapas" class="fit"></div>
+  </section>
+  <section class="card c4" data-detalhe="risco">
+    <h2><span>🛟 MRR em risco</span> <span class="sub" id="risco-sub"></span></h2>
+    <div class="grande-num" id="risco-valor">R$ 0</div>
+    <div class="sub" id="risco-detalhe"></div>
+    <ul class="lista fit" id="risco-lista"></ul>
+  </section>
+  <section class="card c6" data-detalhe="antigos">
+    <h2><span>⏳ Leads abertos há muito tempo</span> <span class="sub" id="ant-sub"></span></h2>
+    <ul class="lista fit" id="ant-lista"></ul>
+  </section>
+  <section class="card c6" data-detalhe="base">
+    <h2><span>🧩 Base de clientes</span> <span class="sub" id="base-sub"></span></h2>
+    <div class="stats" id="base-stats"></div>
+    <ul class="lista fit" id="queda-lista"></ul>
+  </section>
+</main>
+<div class="modal-fundo" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <div class="modal-topo">
+      <h2 id="modal-titulo"></h2>
+      <input id="modal-busca" type="search" placeholder="Buscar…" autocomplete="off" aria-label="Buscar na lista">
+      <button class="modal-fechar" id="modal-fechar" type="button" aria-label="Fechar">✕</button>
+    </div>
+    <div class="modal-resumo" id="modal-resumo"></div>
+    <div class="modal-corpo"><table id="modal-tabela"><thead></thead><tbody></tbody></table><div id="modal-vazio" class="vazio-modal" hidden></div></div>
+  </div>
+</div>
+<canvas id="confete"></canvas>
+
+<script>
+const $ = (id) => document.getElementById(id);
+// Monta elementos com textContent: conteúdo vindo de CRM/helpdesk nunca vira HTML.
+const h = (tag, cls, ...filhos) => {
+  const e = document.createElement(tag); if (cls) e.className = cls;
+  for (const f of filhos) if (f != null) e.append(f.nodeType ? f : document.createTextNode(f));
+  return e;
+};
+const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmtH = (x) => x >= 48 ? `${Math.floor(x / 24)}d ${Math.floor(x % 24)}h` : `${Math.floor(x)}h`;
+const fmtD = (d) => (d >= 1 ? `${Math.floor(d)}d` : '<1d');
+const CORES = ['#2f6bff', '#38bdf8', '#6366f1', '#22d3ee', '#0ea5e9', '#818cf8'];
+const cor = (s) => CORES[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % CORES.length];
+const iniciais = (s) => s.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+const emTv = () => document.body.classList.contains('tv');
+
+// Números que "sobem" até o valor final.
+function contar(el, para, fmt = (x) => String(Math.round(x))) {
+  const de = el._v ?? 0; el._v = para;
+  if (de === para) { el.textContent = fmt(para); return; }
+  const ini = performance.now();
+  const passo = (t) => {
+    const p = Math.min(1, (t - ini) / 800), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = fmt(de + (para - de) * e);
+    if (p < 1) requestAnimationFrame(passo);
+  };
+  requestAnimationFrame(passo);
+}
+const definirLargura = (el, pct) => requestAnimationFrame(() => { el.style.width = pct + '%'; });
+
+// ----- modo monitor: escala a partir de 1280x720 e esconde o que não cabe -----
+let ultimo = null;
+function escalar() {
+  const paisagem = innerWidth >= 900 && innerWidth / innerHeight >= 1.2;
+  document.body.classList.toggle('tv', paisagem);
+  document.documentElement.style.setProperty('--z', paisagem ? Math.max(0.6, Math.min(innerWidth / 1280, innerHeight / 720)).toFixed(3) : 1);
+  tela.width = innerWidth; tela.height = innerHeight;
+}
+// Mostra só os itens que cabem no contêiner e informa quantos ficaram de fora.
+function ajustar(el) {
+  el.querySelector(':scope > .mais')?.remove();
+  const itens = [...el.children];
+  itens.forEach((c) => { c.style.display = ''; });
+  const total = Number(el.dataset.total ?? itens.length);
+  let visiveis = itens.length;
+  if (emTv()) {
+    const lim = () => el.getBoundingClientRect().bottom + 0.5;
+    visiveis = itens.filter((c) => c.getBoundingClientRect().bottom <= lim()).length;
+  } else visiveis = Math.min(itens.length, 6);
+  itens.forEach((c, i) => { c.style.display = i < visiveis ? '' : 'none'; });
+  if (total > visiveis && itens.length && !itens[0].classList.contains('vazio')) {
+    const mais = h('li', 'mais', ''); el.append(mais);
+    const atualizar = () => { mais.textContent = `+${total - visiveis} ${el.dataset.rotulo ?? 'itens'}`; };
+    atualizar();
+    // O próprio "+N" ocupa espaço: se estourar, cede mais um item.
+    while (emTv() && visiveis > 1 && mais.getBoundingClientRect().bottom > el.getBoundingClientRect().bottom + 0.5) {
+      visiveis--; itens[visiveis].style.display = 'none'; atualizar();
+    }
+  }
+}
+const ajustarTodos = () => document.querySelectorAll('.fit').forEach(ajustar);
+
+// ----- confete -----
+const tela = $('confete'), ctx = tela.getContext('2d'); let parts = [];
+function confete(qtd = 140) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (let i = 0; i < qtd; i++) parts.push({ x: innerWidth / 2, y: innerHeight * 0.35, vx: (Math.random() - .5) * 16, vy: -Math.random() * 14 - 3, g: .35, r: Math.random() * 6 + 3, c: CORES[i % CORES.length], rot: Math.random() * 6, vr: (Math.random() - .5) * .4, vida: 140 });
+  if (parts.length === qtd) requestAnimationFrame(quadro);
+}
+function quadro() {
+  ctx.clearRect(0, 0, tela.width, tela.height);
+  parts = parts.filter((p) => p.vida-- > 0);
+  for (const p of parts) { p.x += p.vx; p.vy += p.g; p.y += p.vy; p.rot += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; ctx.globalAlpha = Math.min(1, p.vida / 40); ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); ctx.restore(); }
+  if (parts.length) requestAnimationFrame(quadro);
+}
+
+// ----- mascote -----
+let mensagens = [], idxMsg = 0;
+const BOCAS = {
+  feliz: 'M50 100 Q60 108 70 100',
+  animado: 'M47 98 Q60 118 73 98 Z',
+  preocupado: 'M49 105 Q54 100 60 104 T71 104',
+  triste: 'M50 107 Q60 98 70 107',
+  pensativo: 'M52 104 L68 101',
+};
+function aplicarHumor(humor) {
+  const m = $('mascote');
+  m.dataset.humor = humor in BOCAS ? humor : 'feliz';
+  m.querySelector('.boca').setAttribute('d', BOCAS[m.dataset.humor]);
+}
+// A cara acompanha o que ele diz. A ordem importa: "perdeu" (triste) vence "perde" (risco, preocupado), e coisas boas
+// vencem palavras como "atrasos" em frases como "Zero atrasos!". Sem pista, fica feliz.
+function humorDe(txt) {
+  if (/perdeu|💔 ?$/.test(txt) && !/perde /.test(txt)) return 'triste';
+  if (/🎉|🏅|🔥|batida|ganhou|garantido|Nova venda|Subiu|cumprida|recebida|nenhum|zero /i.test(txt)) return 'animado';
+  if (/🎧|🚀|😕|perde |atenção|atrasad|atendimento.* passou|há mais de \d+ ?(horas|h|dias)|aguardando o financeiro|em risco|💰|🛟|parad|aviso|falha|não consegui|erro|sem movimento/i.test(txt)) return 'preocupado';
+  if (/🤔|sem dados|ainda não|não sei|enviando|carregando|\?$/i.test(txt)) return 'pensativo';
+  return 'feliz';
+}
+function dizer(txt, humor = humorDe(txt)) {
+  const b = $('balao'); b.replaceWith(Object.assign(b.cloneNode(false), { id: 'balao', textContent: txt }));
+  aplicarHumor(humor);
+}
+setInterval(() => { if (mensagens.length && !falando) dizer(mensagens[idxMsg++ % mensagens.length]); }, 7000);
+
+function montarMensagens(e) {
+  const m = [], falta = e.reunioes.meta - e.reunioes.realizadas;
+  const atrasos = e.suporte.atrasados.length + e.funil.parados.length;
+  const comErro = Boolean(e.erros.suporte || e.erros.funil);
+  if (!e.reunioes.semDados) m.push(falta > 0 ? `Faltam ${falta} ${falta > 1 ? 'reuniões' : 'reunião'} para a meta do dia! 💪` : 'Meta de reuniões batida! Que time incrível! 🎉');
+  if (e.suporte.atrasados.length) m.push(`${e.suporte.atrasados.length} atendimento${e.suporte.atrasados.length > 1 ? 's' : ''} passou de ${e.limites.suporte}h. Vamos resolver? 🎧`);
+  if (e.funil.parados.length) m.push(`${e.funil.parados.length} implantaç${e.funil.parados.length > 1 ? 'ões paradas' : 'ão parada'} há mais de ${e.limites.funil}h. 🚀`);
+  if (!atrasos && !comErro) m.push('Zero atrasos! Sua sequência está pegando fogo! 🔥');
+  if (e.jogo.ganhouHoje) m.push('Coração de hoje garantido! ❤️');
+  else if (e.jogo.emRisco) m.push('Atenção: se hoje não bater as metas, você perde um coração! 💔');
+  else m.push('Bata as metas do dia para ganhar um coração! ❤️');
+  if (!e.negocio.semDados && e.negocio.financeiro.quantidade) m.push(`${brl(e.negocio.financeiro.valor)} aguardando o financeiro, o mais antigo há ${fmtD(e.negocio.financeiro.maisAntigoDias)}. 💰`);
+  if (!e.instancias.vazio && e.instancias.mrrEmRisco > 0) m.push(`${brl(e.instancias.mrrEmRisco)} por mês em risco: ${e.instancias.semMovimento.length} clientes com fila oficial sem mensagens. 🛟`);
+  if (e.reunioes.semDados) m.push('Ainda não consigo ler as reuniões do Microsoft 365. 🤔');
+  if (Object.keys(e.erros).length) m.push('Alguma fonte de dados está com aviso. Veja as faixas laranja. 😕');
+  return m;
+}
+
+// ----- renderização -----
+let primeira = true; const vendasVistas = new Set(); const missoesFeitas = new Set(); let jogoAntes = null;
+
+function lista(ul, itens, vazio, bom, total = itens.length, rotulo = 'itens') {
+  ul.dataset.total = total; ul.dataset.rotulo = rotulo;
+  ul.replaceChildren(...(itens.length ? itens : [h('li', 'vazio' + (bom ? ' bom' : ''), vazio)]));
+}
+function avisoFonte(id, chave, e) {
+  $(id).replaceChildren(...(e.erros[chave] ? [h('div', 'aviso-fonte', `Atenção: ${e.erros[chave]}`)] : []));
+}
+
+function desenharGrafico(e) {
+  const agora = new Date().getHours(), horas = e.reunioes.porHora;
+  $('g-sub').textContent = e.reunioes.semDados ? 'sem dados' : `${e.reunioes.realizadas} feitas · ${e.reunioes.agendadas} a seguir`;
+  $('aviso-reunioes').replaceChildren(...(e.erros.reunioes
+    ? [h('div', 'aviso-fonte', e.reunioes.semDados ? 'Aguardando a conexão com o Microsoft 365 (veja o LEIAME).' : `Atenção: ${e.erros.reunioes.slice(0, 110)}${e.erros.reunioes.length > 110 ? '…' : ''}`)]
+    : []));
+  const comVenda = horas.map((n, i) => (n ? i : -1)).filter((i) => i >= 0);
+  const ini = Math.min(8, ...comVenda, agora), fim = Math.max(18, agora, ...comVenda);
+  const max = Math.max(1, ...horas);
+  const graf = $('grafico'); graf.replaceChildren();
+  const alt = Math.max(20, graf.clientHeight - 48);
+  for (let hr = ini; hr <= fim; hr++) {
+    const haste = h('div', 'haste');
+    graf.append(h('div', 'col' + (horas[hr] ? ' tem' : '') + (hr === agora ? ' agora' : ''), h('div', 'n', horas[hr] || ''), haste, h('div', 'h', hr + 'h')));
+    requestAnimationFrame(() => requestAnimationFrame(() => { haste.style.height = Math.max(4, (horas[hr] / max) * alt) + 'px'; }));
+  }
+}
+
+function desenhar(e) {
+  ultimo = e;
+  // topo
+  contar($('seq'), e.jogo.sequencia); $('nivel').textContent = e.jogo.nivel;
+  const j = e.jogo, ganhou = jogoAntes && j.coracoes > jogoAntes.coracoes, perdeu = jogoAntes && j.coracoes < jogoAntes.coracoes;
+  $('coracoes').replaceChildren(...Array.from({ length: j.porNivel }, (_, i) => h('span', 'coracao' + (i >= j.noNivel ? ' vazio' : '') + (ganhou && i === j.noNivel - 1 ? ' ganhou' : '') + (perdeu && i === j.noNivel ? ' perdeu' : ''), '❤️')));
+  $('cor-total').textContent = `${j.coracoes} ❤`;
+  const dica = `${j.coracoes} coração(ões) · faltam ${j.porNivel - j.noNivel} para o nível ${j.nivel + 1}. Bata as metas do dia para ganhar um; a partir do 2º dia seguido sem bater, perde um por dia.`;
+  $('coracoes').title = dica; $('nivel-pilula').title = dica;
+  if (jogoAntes && j.nivel > jogoAntes.nivel) { confete(220); dizer(`Subiu para o nível ${j.nivel}! 🎉`); }
+  else if (ganhou) { confete(70); dizer('Metas do dia batidas: você ganhou um coração! ❤️'); }
+  else if (perdeu) dizer('Você perdeu um coração. Bata as metas hoje para recuperar! 💔');
+  jogoAntes = j;
+  $('status').textContent = 'atualizado às ' + new Date(e.atualizadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  // meta do dia
+  const R = e.reunioes, qtd = R.realizadas, pct = R.semDados ? 0 : Math.min(1, qtd / R.meta);
+  $('anel').style.strokeDashoffset = 326.7 * (1 - pct); $('anel').classList.toggle('cheio', pct >= 1);
+  $('v-qtd').textContent = R.semDados ? '–' : ''; if (!R.semDados) contar($('v-qtd'), qtd); $('v-meta').textContent = R.meta;
+  $('v-total-reun').textContent = R.semDados ? '–' : R.hoje.length;
+  contar($('v-valor'), e.vendas.valor, brl);
+  $('v-falta').textContent = R.semDados ? 'sem dados do Microsoft 365' : qtd >= R.meta ? 'Meta batida! 🏅' : `Faltam ${R.meta - qtd} para a meta · ${R.agendadas} a seguir`;
+
+  // missões (uma missão sem itens e com a fonte fora do ar não conta como cumprida)
+  const feitas = e.jogo.missoes.map((m) => m.feito && !(!m.alvo && e.erros[m.id]));
+  $('m-resumo').textContent = `${feitas.filter(Boolean).length}/${e.jogo.missoes.length}` + (e.jogo.ganhouHoje ? ' · ❤️ ganho hoje!' : ' · bata as metas p/ ganhar ❤️');
+  $('missoes').replaceChildren(...e.jogo.missoes.map((m, i) => {
+    const barra = h('div', 'barra' + (m.id === 'reunioes' ? ' azul' : '')); const bi = h('i'); barra.append(bi);
+    definirLargura(bi, m.alvo ? (m.atual / m.alvo) * 100 : 0);
+    const feito = feitas[i];
+    if (feito && !missoesFeitas.has(m.id) && !primeira) { confete(90); dizer(`Missão cumprida: ${m.titulo}! 🎉`); }
+    if (feito) missoesFeitas.add(m.id); else missoesFeitas.delete(m.id);
+    return h('div', 'missao' + (feito ? ' feita' : ''), h('div', 'ic', m.icone),
+      h('div', 'meio', h('div', 'nome', h('span', '', m.titulo), h('span', 'sub', e.jogo.semAvaliar?.includes(m.id) ? 'sem dados' : `${m.atual}/${m.alvo}`)), barra),
+      h('div', 'check', feito ? '✓' : ''));
+  }));
+
+  desenharGrafico(e);
+
+  // feed de vendas
+  const nVendas = e.vendas.hoje.length;
+  $('f-n').textContent = nVendas ? `${nVendas} · ${brl(e.vendas.valor)}` : '';
+  avisoFonte('aviso-vendas', 'vendas', e);
+  lista($('feed'), e.vendas.hoje.slice(0, 40).map((v) => {
+    const novo = !primeira && !vendasVistas.has(v.id);
+    if (novo) { confete(); dizer(`Nova venda: ${v.cliente}! 🎉`); }
+    return h('li', 'linha' + (novo ? ' novo' : ''), h('div', 'medalha', '💰'),
+      h('div', 'corpo', h('div', 't', v.cliente), h('div', 'sub', `${v.vendedor ? v.vendedor + ' · ' : ''}${new Date(v.fechadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`)),
+      h('div', 'valor', brl(Number(v.valor) || 0)));
+  }), 'Nenhuma venda ainda hoje. A primeira é a mais difícil! 💪', false, nVendas, 'vendas');
+  e.vendas.hoje.forEach((v) => vendasVistas.add(v.id));
+
+  // clientes sem movimento de mensagens oficiais
+  const inst = e.instancias;
+  $('i-sub').textContent = inst.vazio ? '' : `${inst.semMovimento.length} de ${inst.total}${inst.diasDeHistorico < inst.limiteDias ? ` · histórico: ${inst.diasDeHistorico}d` : ''}`;
+  avisoFonte('aviso-instancias', 'instancias', e);
+  if (!inst.vazio && inst.semInfoFila && !e.erros.instancias) {
+    $('aviso-instancias').replaceChildren(h('div', 'aviso-fonte', 'A planilha não traz "Filas WA Oficiais": ative a coluna no Seletor de Colunas e exporte de novo. Por enquanto conta todos.'));
+  }
+  lista($('instancias'), inst.vazio ? [] : inst.semMovimento.slice(0, 60).map((x) => {
+    const av = h('div', 'avatar', iniciais(x.instancia)); av.style.background = cor(x.instancia);
+    const fila = x.filaOficial === true ? ['fila oficial', ''] : x.filaOficial === false ? ['sem fila oficial', 'cinza'] : ['fila ?', 'med'];
+    return h('li', 'linha', av,
+      h('div', 'corpo', h('div', 't', x.instancia), h('div', 'sub', x.motivo === 'zerado' ? 'zerado em 30 dias' : `sem variação há ${x.diasParado} dias`)),
+      h('span', 'tempo ' + fila[1], fila[0]));
+  }), inst.vazio ? 'Sem dados ainda. Exporte o painel de instâncias (.xlsx) e envie pelo botão ⬆ aqui em cima.' : `Nenhum cliente parado há ${inst.limiteDias} dias! 📨`, !inst.vazio, inst.semMovimento.length, 'clientes');
+
+  // suporte
+  $('lim-s').textContent = e.limites.suporte; avisoFonte('aviso-suporte', 'suporte', e);
+  const atr = e.suporte.atrasados.length, dia = e.suporte.abertos - atr, C = 289;
+  $('rosca-ok').setAttribute('stroke-dasharray', `${e.suporte.abertos ? (dia / e.suporte.abertos) * C : C} ${C}`);
+  contar($('s-atras'), atr); contar($('s-atras2'), atr); contar($('s-dia'), dia);
+  lista($('suporte'), e.suporte.atrasados.slice(0, 40).map((t) => {
+    const av = h('div', 'avatar', iniciais(t.cliente)); av.style.background = cor(t.cliente);
+    return h('li', 'linha', av,
+      h('div', 'corpo', h('div', 't', t.cliente), h('div', 'sub', `${t.id} · ${t.assunto}${t.atendente ? ' · ' + t.atendente : ''}`)),
+      h('span', 'tempo' + (t.horas < e.limites.suporte * 1.5 ? ' med' : ''), fmtH(t.horas)));
+  }), 'Nenhum atendimento atrasado! ✨', true, atr, 'atrasados');
+
+  // funil
+  $('lim-f').textContent = e.limites.funil; avisoFonte('aviso-funil', 'funil', e);
+  const etapas = [...e.funil.etapas].sort((a, b) => b.parados - a.parados || b.total - a.total);
+  const maxEt = Math.max(1, ...etapas.map((x) => x.total));
+  $('etapas').dataset.total = etapas.length; $('etapas').dataset.rotulo = 'etapas';
+  $('etapas').replaceChildren(...etapas.map((x) => {
+    const v = h('i', 'v'), r = h('i', 'r');
+    definirLargura(v, ((x.total - x.parados) / maxEt) * 100); definirLargura(r, (x.parados / maxEt) * 100);
+    return h('div', 'etapa', h('div', 'topo', h('span', '', x.etapa), h('span', 'sub', `${x.parados} parados · ${x.total}`)), h('div', 'pilha', v, r));
+  }));
+  lista($('funil'), e.funil.parados.slice(0, 40).map((n) => {
+    const av = h('div', 'avatar', iniciais(n.cliente)); av.style.background = cor(n.cliente);
+    return h('li', 'linha', av,
+      h('div', 'corpo', h('div', 't', n.cliente), h('div', 'sub', `${n.etapa} · ${n.responsavel}`)),
+      h('span', 'tempo' + (n.horas < e.limites.funil * 1.5 ? ' med' : ''), fmtH(n.horas)));
+  }), e.erros.funil ? 'Funil indisponível no momento.' : 'Nenhum cliente parado! 🚀', !e.erros.funil, e.funil.parados.length, 'parados');
+
+  mensagens = montarMensagens(e);
+  if (primeira) { dizer(mensagens[0]); }
+  primeira = false;
+  ajustarTodos();
+  desenharTela2(e);
+  desenharDetalhe(); // se o pop-up estiver aberto, atualiza a lista junto
+}
+
+// Tempo real por consulta: o painel pergunta de 15 em 15 s. (Conexão aberta não funciona na Vercel.)
+// O servidor só recalcula a cada ~30 s; se nada mudou desde a última resposta, não redesenha.
+let consultando = false;
+async function consultar() {
+  if (consultando) return;
+  consultando = true;
+  try {
+    const r = await fetch('/api/estado');
+    if (r.status === 401) { location.href = '/login'; return; }
+    if (!r.ok) throw new Error(r.status);
+    const e = await r.json();
+    if (!ultimo || e.atualizadoEm !== ultimo.atualizadoEm) desenhar(e);
+  } catch {
+    $('status').textContent = 'reconectando…';
+  } finally {
+    consultando = false;
+  }
+}
+consultar();
+setInterval(consultar, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) consultar(); });
+
+let timerResize;
+addEventListener('resize', () => {
+  clearTimeout(timerResize);
+  timerResize = setTimeout(() => { escalar(); mostrarTela(telaAtual); if (ultimo) { desenharGrafico(ultimo); ajustarTodos(); } }, 150);
+});
+escalar();
+
+// Tela cheia: clique no logo ou tecla F.
+const telaCheia = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.());
+$('marca').onclick = telaCheia;
+addEventListener('keydown', (ev) => { if (ev.key.toLowerCase() === 'f' && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) telaCheia(); });
+
+// ----- pop-up com a lista completa (clique nos cartões) -----
+// Cada célula é { t: texto exibido, v: valor para ordenar }. Texto sempre via textContent (nunca HTML).
+const hora = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+const cel = (t, v = t) => ({ t: String(t), v });
+const filaTxt = (f) => (f === true ? 'tem fila oficial' : f === false ? 'sem fila oficial' : 'não verificada');
+
+const DETALHES = {
+  financeiro: {
+    titulo: '💰 Travado no financeiro',
+    colunas: [['Esperando', 'num'], ['Cliente'], ['Tipo'], ['Setup', 'num'], ['Recorrência', 'num'], ['Total', 'num'], ['Código']],
+    linhas: (e) => e.negocio.financeiro.itens.map((i) => [cel(fmtD(i.dias), i.dias), cel(i.cliente), cel(i.tipo ?? '—'), cel(brl(i.setup), i.setup), cel(brl(i.recorrencia), i.recorrencia), cel(brl(i.valor), i.valor), cel(i.id)]),
+    resumo: (e) => `${brl(e.negocio.financeiro.valor)} em ${e.negocio.financeiro.quantidade} ticket(s) aguardando a aprovação do pagamento. A idade conta desde a criação do ticket.`,
+    ordem: [0, -1],
+    vazio: 'Nada aguardando o financeiro.',
+  },
+  pipeline: {
+    titulo: '📈 Pipeline em aberto, por etapa',
+    colunas: [['Etapa'], ['Leads', 'num'], ['Valor', 'num']],
+    linhas: (e) => e.negocio.pipeline.etapas.map((x, i) => [cel(x.etapa.replace(/^[^\p{L}\p{N}]+/u, ''), i), cel(x.quantidade, x.quantidade), cel(brl(x.valor), x.valor)]),
+    resumo: (e) => `${brl(e.negocio.pipeline.valor)} em ${e.negocio.pipeline.quantidade} leads (fora Ganho, Perdido, Congelado e No Show)`,
+    ordem: [0, 1],
+    vazio: 'Sem leads em aberto.',
+  },
+  antigos: {
+    titulo: '⏳ Leads abertos há muito tempo',
+    colunas: [['Aberto há', 'num'], ['Empresa'], ['Etapa'], ['Valor', 'num']],
+    linhas: (e) => e.negocio.pipeline.antigos.map((l) => [cel(fmtD(l.dias), l.dias), cel(l.empresa), cel(l.etapa.replace(/^[^\p{L}\p{N}]+/u, '')), cel(l.valor ? brl(l.valor) : '—', l.valor)]),
+    resumo: (e) => `${e.negocio.pipeline.antigos.length} lead(s) com mais de ${e.negocio.pipeline.limiteDias} dias desde a criação, somando ${brl(e.negocio.pipeline.valorAntigos)}`,
+    ordem: [0, -1],
+    vazio: 'Nenhum lead antigo no funil.',
+  },
+  risco: {
+    titulo: '🛟 MRR em risco',
+    colunas: [['Custo/mês', 'num'], ['Instância'], ['Plano'], ['Situação'], ['Assinatura']],
+    linhas: (e) => e.instancias.semMovimento.map((x) => [cel(x.custo ? brl(x.custo) : '—', x.custo || 0), cel(x.instancia), cel(x.plano || '—'), cel(x.motivo === 'zerado' ? 'zerado em 30 dias' : `sem variação há ${x.diasParado} dias`), cel(x.assinatura || '—')]),
+    resumo: (e) => (e.instancias.vazio ? 'Sem dados: envie a planilha de instâncias.' : `${brl(e.instancias.mrrEmRisco)} por mês em ${e.instancias.semMovimento.length} cliente(s) com fila WA oficial e sem mensagens`),
+    ordem: [0, -1],
+    vazio: 'Nenhum cliente em risco.',
+  },
+  base: {
+    titulo: '🧩 Clientes em queda de uso',
+    colunas: [['Queda', 'num'], ['Instância'], ['Plano'], ['Antes', 'num'], ['Agora', 'num'], ['Custo/mês', 'num']],
+    linhas: (e) => (e.instancias.quedas ?? []).map((x) => [cel(`−${Math.round(x.queda * 100)}%`, x.queda), cel(x.instancia), cel(x.plano || '—'), cel(x.msgs30Anterior.toLocaleString('pt-BR'), x.msgs30Anterior), cel(x.msgs30.toLocaleString('pt-BR'), x.msgs30), cel(x.custo ? brl(x.custo) : '—', x.custo || 0)]),
+    resumo: (e) => (e.instancias.vazio ? 'Sem dados de instâncias.' : `Mensagens oficiais em 30 dias caíram 30% ou mais desde a exportação anterior · ${e.instancias.base.ativos} ativos, ${e.instancias.base.emTeste} em teste, ${e.instancias.base.emCancelamento} em cancelamento`),
+    ordem: [0, -1],
+    vazio: 'Nenhuma queda relevante (ou ainda só há uma exportação).',
+  },
+  reunioes: {
+    titulo: '📅 Reuniões do comercial hoje',
+    colunas: [['Hora'], ['Quem'], ['Assunto'], ['Situação']],
+    linhas: (e) => e.reunioes.hoje.map((r) => [cel(hora(r.inicio), r.inicio), cel(r.pessoas.join(', ')), cel(r.assunto), cel(r.realizada ? 'realizada' : 'a seguir', r.realizada ? 0 : 1)]),
+    resumo: (e) => (e.reunioes.semDados ? `Sem dados: ${e.erros.reunioes ?? 'o Evo ainda não consegue ler a agenda do Microsoft 365.'}` : `${e.reunioes.realizadas} realizada(s) · ${e.reunioes.agendadas} a seguir · meta do dia: ${e.reunioes.meta}${e.reunioes.pessoas.length ? ' · ' + e.reunioes.pessoas.join(', ') : ''}`),
+    ordem: [0, 1],
+    vazio: 'Nenhuma reunião do comercial hoje.',
+  },
+  vendas: {
+    titulo: '💰 Vendas fechadas hoje',
+    colunas: [['Hora'], ['Cliente'], ['Valor', 'num'], ['Vendedor']],
+    linhas: (e) => e.vendas.hoje.map((v) => [cel(hora(v.fechadoEm), v.fechadoEm), cel(v.cliente), cel(brl(Number(v.valor) || 0), Number(v.valor) || 0), cel(v.vendedor ?? '—')]),
+    resumo: (e) => `${e.vendas.hoje.length} venda(s) · ${brl(e.vendas.valor)}`,
+    ordem: [0, -1],
+    vazio: 'Nenhuma venda ainda hoje.',
+  },
+  suporte: {
+    titulo: '🎧 Atendimentos atrasados',
+    colunas: [['Tempo aberto', 'num'], ['Cliente'], ['Fila / assunto'], ['Atendente'], ['Protocolo']],
+    linhas: (e) => e.suporte.atrasados.map((t) => [cel(fmtH(t.horas), t.horas), cel(t.cliente), cel(t.assunto), cel(t.atendente ?? '—'), cel(t.id)]),
+    resumo: (e) => `${e.suporte.atrasados.length} atrasado(s) de ${e.suporte.abertos} abertos · limite: ${e.limites.suporte}h`,
+    ordem: [0, -1],
+    vazio: 'Nenhum atendimento atrasado. ✨',
+  },
+  funil: {
+    titulo: '🚀 Implantações paradas',
+    colunas: [['Parado há', 'num'], ['Cliente'], ['Etapa'], ['Responsável'], ['Código']],
+    linhas: (e) => e.funil.parados.map((n) => [cel(fmtH(n.horas), n.horas), cel(n.cliente), cel(n.etapa), cel(n.responsavel ?? '—'), cel(n.id)]),
+    resumo: (e) => `${e.funil.parados.length} parada(s) de ${e.funil.ativos} ativas · limite: ${e.limites.funil}h`,
+    ordem: [0, -1],
+    vazio: 'Nenhuma implantação parada. 🚀',
+  },
+  instancias: {
+    titulo: '📨 Clientes sem mensagens oficiais',
+    colunas: [['Situação'], ['Instância'], ['Plano'], ['Assinatura'], ['Fila WA oficial']],
+    linhas: (e) => e.instancias.semMovimento.map((x) => [cel(x.motivo === 'zerado' ? 'zerado em 30 dias' : `sem variação há ${x.diasParado} dias`, x.motivo === 'zerado' ? 1e6 : x.diasParado), cel(x.instancia), cel(x.plano || '—'), cel(x.assinatura || '—'), cel(filaTxt(x.filaOficial))]),
+    resumo: (e) => (e.instancias.vazio ? 'Ainda sem dados: envie a planilha exportada do painel de instâncias (botão ⬆).' : `${e.instancias.semMovimento.length} de ${e.instancias.total} clientes${e.instancias.semInfoFila ? ' (planilha sem a coluna de filas oficiais: contando todos)' : ' com fila WA oficial'}${e.instancias.ignoradosSemFila ? ` · ${e.instancias.ignoradosSemFila} sem fila oficial não contam` : ''} · limite: ${e.limites.instancias} dias`),
+    ordem: [0, -1],
+    vazio: 'Nenhum cliente sem movimento.',
+  },
+};
+
+let detalhe = null; // { tipo, busca, ordem: [coluna, direção] }
+let focoAntes = null;
+
+function desenharDetalhe() {
+  if (!detalhe || !ultimo) return;
+  const d = DETALHES[detalhe.tipo];
+  $('modal-titulo').textContent = d.titulo;
+  $('modal-resumo').textContent = d.resumo(ultimo);
+
+  const termo = detalhe.busca.trim().toLowerCase();
+  let linhas = d.linhas(ultimo).filter((l) => !termo || l.some((c) => c.t.toLowerCase().includes(termo)));
+  const [col, dir] = detalhe.ordem;
+  linhas = [...linhas].sort((a, b) => {
+    const x = a[col].v, y = b[col].v;
+    return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'pt-BR')) * dir;
+  });
+
+  const cab = h('tr', '', ...d.colunas.map(([nome, cls], i) => {
+    const th = h('th', cls ?? '', nome + (i === col ? (dir === 1 ? ' ▲' : ' ▼') : ''));
+    th.onclick = () => { detalhe.ordem = [i, i === col ? -dir : 1]; desenharDetalhe(); };
+    return th;
+  }));
+  $('modal-tabela').tHead.replaceChildren(cab);
+  $('modal-tabela').tBodies[0].replaceChildren(...linhas.map((l) => h('tr', '', ...l.map((c, i) => h('td', d.colunas[i][1] ?? '', c.t)))));
+
+  const vazio = $('modal-vazio');
+  vazio.hidden = linhas.length > 0;
+  vazio.textContent = termo ? 'Nada encontrado para essa busca.' : d.vazio;
+  $('modal-tabela').hidden = linhas.length === 0;
+}
+
+function abrirDetalhe(tipo) {
+  if (!ultimo || !DETALHES[tipo]) return;
+  focoAntes = document.activeElement;
+  detalhe = { tipo, busca: '', ordem: [...DETALHES[tipo].ordem] };
+  $('modal-busca').value = '';
+  $('modal').hidden = false;
+  desenharDetalhe();
+  $('modal-busca').focus();
+}
+function fecharDetalhe() {
+  detalhe = null;
+  $('modal').hidden = true;
+  focoAntes?.focus?.();
+}
+
+document.querySelectorAll('[data-detalhe]').forEach((el) => {
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+  el.title = 'Clique para ver a lista completa';
+  el.addEventListener('click', (ev) => { if (!ev.target.closest('.subir, input')) abrirDetalhe(el.dataset.detalhe); });
+  el.addEventListener('keydown', (ev) => { if ((ev.key === 'Enter' || ev.key === ' ') && ev.target === el) { ev.preventDefault(); abrirDetalhe(el.dataset.detalhe); } });
+});
+$('modal-fechar').onclick = fecharDetalhe;
+$('modal').addEventListener('click', (ev) => { if (ev.target === $('modal')) fecharDetalhe(); });
+$('modal-busca').addEventListener('input', (ev) => { if (detalhe) { detalhe.busca = ev.target.value; desenharDetalhe(); } });
+addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && detalhe) fecharDetalhe(); });
+
+// ----- segunda tela: financeiro, pipeline, MRR em risco, leads antigos e base -----
+const itemDinheiro = (titulo, sub, tag, tagCls, valor) => h('li', 'linha',
+  h('div', 'corpo', h('div', 't', titulo), h('div', 'sub', sub)),
+  tag ? h('span', 'tempo ' + tagCls, tag) : null, valor != null ? h('div', 'valor', valor) : null);
+
+function desenharTela2(e) {
+  const N = e.negocio, I = e.instancias;
+  $('aviso-negocio').replaceChildren(...(e.erros.negocio ? [h('div', 'aviso-fonte', N.semDados ? 'Sem dados do Nexu agora.' : `Atenção: ${e.erros.negocio.slice(0, 110)}`)] : []));
+
+  // dinheiro travado no financeiro
+  const F = N.financeiro;
+  $('fin-valor').textContent = N.semDados ? '–' : brl(F.valor);
+  $('fin-valor').classList.toggle('ruim', F.maisAntigoDias >= 14);
+  $('fin-sub').textContent = N.semDados ? '' : `${F.quantidade} ticket${F.quantidade === 1 ? '' : 's'}`;
+  $('fin-detalhe').textContent = F.quantidade ? `aguardando aprovação do pagamento · o mais antigo há ${fmtD(F.maisAntigoDias)}` : 'Nada aguardando o financeiro. ✨';
+  lista($('fin-lista'), F.itens.map((i) => itemDinheiro(i.cliente, `${i.id}${i.tipo ? ' · ' + i.tipo : ''}`, fmtD(i.dias), i.dias >= 14 ? '' : 'med', brl(i.valor))), 'Tudo aprovado! 💰', true, F.itens.length, 'tickets');
+
+  // pipeline em aberto
+  const P = N.pipeline, maxEt = Math.max(1, ...P.etapas.map((x) => x.valor));
+  $('pip-valor').textContent = N.semDados ? '–' : brl(P.valor);
+  $('pip-sub').textContent = N.semDados ? '' : `${P.quantidade} leads`;
+  $('pip-detalhe').textContent = P.quantidade ? `${P.antigos.length} aberto${P.antigos.length === 1 ? '' : 's'} há mais de ${P.limiteDias} dias (${brl(P.valorAntigos)})` : '';
+  $('pip-etapas').dataset.total = P.etapas.length; $('pip-etapas').dataset.rotulo = 'etapas';
+  $('pip-etapas').replaceChildren(...P.etapas.map((x) => {
+    const v = h('i', 'v'); definirLargura(v, (x.valor / maxEt) * 100);
+    return h('div', 'etapa', h('div', 'topo', h('span', '', x.etapa.replace(/^[^\p{L}\p{N}]+/u, '')), h('span', 'sub', `${x.quantidade} · ${brl(x.valor)}`)), h('div', 'pilha', v));
+  }));
+
+  // MRR em risco (clientes com fila WA oficial sem mensagem)
+  $('risco-valor').textContent = I.vazio ? '–' : brl(I.mrrEmRisco);
+  $('risco-valor').classList.toggle('ruim', !I.vazio && I.mrrEmRisco > 0);
+  $('risco-sub').textContent = I.vazio ? '' : `${I.semMovimento.length} clientes`;
+  $('risco-detalhe').textContent = I.vazio ? 'Envie a planilha de instâncias (botão ⬆ na tela principal).' : 'por mês, de clientes com fila WA oficial e sem mensagens';
+  const risco = I.vazio ? [] : [...I.semMovimento].sort((a, b) => (b.custo || 0) - (a.custo || 0));
+  lista($('risco-lista'), risco.map((x) => itemDinheiro(x.instancia, `${x.plano || '—'} · ${x.motivo === 'zerado' ? 'zerado em 30 dias' : `sem variação há ${x.diasParado}d`}`, null, '', x.custo ? brl(x.custo) : '—')),
+    I.vazio ? 'Sem dados de instâncias.' : 'Nenhum cliente em risco. 🎉', !I.vazio, risco.length, 'clientes');
+
+  // leads abertos há muito tempo
+  $('ant-sub').textContent = N.semDados ? '' : `mais de ${P.limiteDias} dias · ${P.antigos.length} leads`;
+  lista($('ant-lista'), P.antigos.map((l) => itemDinheiro(l.empresa, l.etapa.replace(/^[^\p{L}\p{N}]+/u, ''), fmtD(l.dias), l.dias >= 90 ? '' : 'med', l.valor ? brl(l.valor) : null)),
+    'Nenhum lead antigo no funil. 🚀', true, P.antigos.length, 'leads');
+
+  // base de clientes e queda de uso
+  const B = I.vazio ? null : I.base, Q = I.vazio ? [] : I.quedas;
+  const stat = (n, rotulo, alerta) => h('div', 'stat' + (alerta ? ' alerta' : ''), h('b', '', B ? String(n) : '–'), h('span', '', rotulo));
+  $('base-stats').replaceChildren(stat(B?.ativos, 'ativos'), stat(B?.emTeste, 'em teste'), stat(B?.emCancelamento, 'em cancelamento', B?.emCancelamento > 0), stat(Q.length, 'em queda de uso', Q.length > 0));
+  $('base-sub').textContent = I.vazio ? '' : 'queda ≥ 30% desde a exportação anterior';
+  lista($('queda-lista'), Q.map((x) => itemDinheiro(x.instancia, `${x.msgs30Anterior.toLocaleString('pt-BR')} → ${x.msgs30.toLocaleString('pt-BR')} mensagens`, `−${Math.round(x.queda * 100)}%`, '', x.custo ? brl(x.custo) : null)),
+    I.vazio ? 'Sem dados de instâncias.' : I.diasDeHistorico < 2 ? 'A queda de uso aparece a partir da 2ª exportação.' : 'Nenhuma queda relevante. ✅', !I.vazio && I.diasDeHistorico >= 2, Q.length, 'clientes');
+}
+
+// ----- rotação entre as telas (só no modo monitor) -----
+const ROTACAO_MS = 20000;
+const parametros = new URLSearchParams(location.search);
+var telaAtual = parametros.get('tela') === '2' ? 1 : 0; // var: lido por escalar() antes desta linha rodar
+let pausaAte = 0, ultimoMovimento = 0;
+const TELAS = ['tela1', 'tela2'];
+
+function pausada() {
+  return parametros.has('fixa') || detalhe || /INPUT|TEXTAREA/.test(document.activeElement?.tagName ?? '') || falando
+    || Date.now() < pausaAte || Date.now() - ultimoMovimento < 8000;
+}
+function mostrarTela(i) {
+  telaAtual = ((i % TELAS.length) + TELAS.length) % TELAS.length;
+  TELAS.forEach((id, k) => { $(id).hidden = emTv() && k !== telaAtual; }); // fora do modo monitor as duas aparecem, uma sobre a outra
+  $('telas').replaceChildren(...TELAS.map((_, k) => Object.assign(h('i', k === telaAtual ? 'ativa' : ''), { title: k === 0 ? 'Principal' : 'Negócio', onclick: () => { pausaAte = Date.now() + 60_000; mostrarTela(k); } })));
+  $('telas').style.display = emTv() ? 'flex' : 'none';
+  $('telas').classList.toggle('pausado', parametros.has('fixa'));
+  requestAnimationFrame(() => { if (ultimo) desenharGrafico(ultimo); ajustarTodos(); });
+}
+setInterval(() => { if (emTv() && !pausada()) mostrarTela(telaAtual + 1); }, ROTACAO_MS);
+addEventListener('mousemove', () => { ultimoMovimento = Date.now(); });
+addEventListener('keydown', (ev) => {
+  if (/INPUT|TEXTAREA/.test(document.activeElement?.tagName ?? '')) return;
+  if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { pausaAte = Date.now() + 60_000; mostrarTela(telaAtual + (ev.key === 'ArrowRight' ? 1 : -1)); }
+});
+mostrarTela(telaAtual);
+
+// ----- envio da planilha de instâncias -----
+$('arquivo').onchange = async (ev) => {
+  const f = ev.target.files[0]; ev.target.value = '';
+  if (!f) return;
+  dizer('Enviando a planilha…');
+  try {
+    const r = await fetch('/api/importar?nome=' + encodeURIComponent(f.name), { method: 'POST', body: f });
+    const j = await r.json();
+    dizer(r.ok ? `Planilha recebida! ${j.semMovimento} cliente(s) sem movimento, histórico de ${j.diasDeHistorico} dia(s).` : `Não consegui ler a planilha: ${j.erro}`);
+  } catch { dizer('Falha ao enviar a planilha.'); }
+};
+
+// ----- chat e voz -----
+let falando = false;
+function falar(txt) {
+  dizer(txt.length > 140 ? txt.slice(0, 137) + '…' : txt);
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(txt); u.lang = 'pt-BR';
+  u.onstart = () => { falando = true; $('mascote').classList.add('falando'); };
+  u.onend = u.onerror = () => { falando = false; $('mascote').classList.remove('falando'); };
+  speechSynthesis.speak(u);
+}
+const linha = (cls, txt) => { $('log').append(h('p', cls, txt)); $('log').scrollTop = 1e9; };
+async function perguntar(texto) {
+  if (!texto.trim()) return;
+  linha('eu', 'Você: ' + texto);
+  try {
+    const r = await fetch('/api/chat', { method: 'POST', body: JSON.stringify({ pergunta: texto }) });
+    const { resposta } = await r.json();
+    linha('', 'Evo: ' + resposta); falar(resposta);
+  } catch { linha('', 'Evo: não consegui responder agora.'); }
+}
+$('form').onsubmit = (ev) => { ev.preventDefault(); const t = $('pergunta').value; $('pergunta').value = ''; perguntar(t); };
+const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!Rec) $('mic').style.display = 'none'; else {
+  const rec = new Rec(); rec.lang = 'pt-BR'; rec.interimResults = false;
+  rec.onresult = (ev) => perguntar(ev.results[0][0].transcript);
+  rec.onend = () => $('mic').classList.remove('on');
+  $('mic').onclick = () => { speechSynthesis.cancel(); $('mic').classList.add('on'); rec.start(); };
+}
+</script>
+</body>
+</html>
