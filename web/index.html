@@ -310,20 +310,27 @@
   </section>
 </main>
 <main id="tela2" class="tela" hidden>
-  <section class="card c4" data-detalhe="financeiro">
+  <section class="card c3" data-detalhe="mes">
+    <h2><span>🏆 Vendas do mês</span> <span class="sub" id="mes-sub"></span></h2>
+    <div class="sub">Total aprovado</div>
+    <div class="grande-num" id="mes-valor">R$ 0</div>
+    <div class="sub" id="mes-detalhe"></div>
+    <div class="sub" id="mes-aguardando"></div>
+  </section>
+  <section class="card c3" data-detalhe="financeiro">
     <h2><span>💰 Travado no financeiro</span> <span class="sub" id="fin-sub"></span></h2>
     <div id="aviso-negocio"></div>
     <div class="grande-num" id="fin-valor">R$ 0</div>
     <div class="sub" id="fin-detalhe"></div>
     <ul class="lista fit" id="fin-lista"></ul>
   </section>
-  <section class="card c4" data-detalhe="pipeline">
+  <section class="card c3" data-detalhe="pipeline">
     <h2><span>📈 Pipeline em aberto</span> <span class="sub" id="pip-sub"></span></h2>
     <div class="grande-num" id="pip-valor">R$ 0</div>
     <div class="sub" id="pip-detalhe"></div>
     <div id="pip-etapas" class="fit"></div>
   </section>
-  <section class="card c4" data-detalhe="risco">
+  <section class="card c3" data-detalhe="risco">
     <h2><span>🛟 MRR em risco</span> <span class="sub" id="risco-sub"></span></h2>
     <div class="grande-num" id="risco-valor">R$ 0</div>
     <div class="sub" id="risco-detalhe"></div>
@@ -653,9 +660,18 @@ const DETALHES = {
     titulo: '💰 Travado no financeiro',
     colunas: [['Esperando', 'num'], ['Cliente'], ['Tipo'], ['Setup', 'num'], ['Recorrência', 'num'], ['Total', 'num'], ['Código']],
     linhas: (e) => e.negocio.financeiro.itens.map((i) => [cel(fmtD(i.dias), i.dias), cel(i.cliente), cel(i.tipo ?? '—'), cel(brl(i.setup), i.setup), cel(brl(i.recorrencia), i.recorrencia), cel(brl(i.valor), i.valor), cel(i.id)]),
-    resumo: (e) => `${brl(e.negocio.financeiro.valor)} em ${e.negocio.financeiro.quantidade} ticket(s) aguardando a aprovação do pagamento. A idade conta desde a criação do ticket.`,
+    resumo: (e) => `${brl(e.negocio.financeiro.valor)} em ${e.negocio.financeiro.quantidade} ticket(s) do mês aguardando a aprovação do pagamento${e.negocio.financeiro.anteriores?.quantidade ? `, mais ${e.negocio.financeiro.anteriores.quantidade} de meses anteriores (${brl(e.negocio.financeiro.anteriores.valor)})` : ''}. A idade conta desde a criação do ticket.`,
     ordem: [0, -1],
     vazio: 'Nada aguardando o financeiro.',
+  },
+  mes: {
+    titulo: '🏆 Vendas do mês',
+    colunas: [['Indicador'], ['Vendas', 'num'], ['Setup', 'num'], ['Recorrência', 'num'], ['Total', 'num']],
+    linhas: (e) => (e.negocio.mes ? [['Total aprovado', e.negocio.mes.aprovado], ['Aguardando aprovação', e.negocio.mes.aguardando]] : [])
+      .map(([n, x], i) => [cel(n, i), cel(x.quantidade, x.quantidade), cel(brl(x.setup), x.setup), cel(brl(x.recorrencia), x.recorrencia), cel(brl(x.total), x.total)]),
+    resumo: () => 'Mesma conta do Dashboard do Nexu ("Este mês"): tickets comerciais pela data da venda. Aprovado = pagamento confirmado, em implantação ou concluído.',
+    ordem: [0, 1],
+    vazio: 'Sem dados do Nexu agora.',
   },
   pipeline: {
     titulo: '📈 Pipeline em aberto, por etapa',
@@ -802,14 +818,24 @@ function desenharTela2(e) {
   const F = N.financeiro;
   $('fin-valor').textContent = N.semDados ? '–' : brl(F.valor);
   $('fin-valor').classList.toggle('ruim', F.maisAntigoDias >= 14);
-  $('fin-sub').textContent = N.semDados ? '' : `${F.quantidade} ticket${F.quantidade === 1 ? '' : 's'}`;
-  $('fin-detalhe').textContent = F.quantidade ? `aguardando aprovação do pagamento · o mais antigo há ${fmtD(F.maisAntigoDias)}` : 'Nada aguardando o financeiro. ✨';
+  $('fin-sub').textContent = N.semDados ? '' : `${F.quantidade} ticket${F.quantidade === 1 ? '' : 's'} no mês`;
+  const ant = F.anteriores ?? { quantidade: 0, valor: 0 };
+  $('fin-detalhe').textContent = (F.quantidade || ant.quantidade)
+    ? `aguardando aprovação do pagamento${ant.quantidade ? ` · +${ant.quantidade} de meses anteriores (${brl(ant.valor)})` : ''} · o mais antigo há ${fmtD(F.maisAntigoDias)}`
+    : 'Nada aguardando o financeiro. ✨';
+
+  // vendas do mês (mesmos números do Dashboard do Nexu, "Este mês")
+  const M = N.mes;
+  $('mes-valor').textContent = !M ? '–' : brl(M.aprovado.total);
+  $('mes-sub').textContent = !M ? '' : `${M.aprovado.quantidade} venda${M.aprovado.quantidade === 1 ? '' : 's'}`;
+  $('mes-detalhe').textContent = !M ? '' : `Setup: ${brl(M.aprovado.setup)} · Recorrência: ${brl(M.aprovado.recorrencia)} · ${M.clientesNovos} cliente${M.clientesNovos === 1 ? '' : 's'} novo${M.clientesNovos === 1 ? '' : 's'}`;
+  $('mes-aguardando').textContent = !M ? '' : `Aguardando aprovação: ${brl(M.aguardando.total)} (${M.aguardando.quantidade})`;
   lista($('fin-lista'), F.itens.map((i) => itemDinheiro(i.cliente, `${i.id}${i.tipo ? ' · ' + i.tipo : ''}`, fmtD(i.dias), i.dias >= 14 ? '' : 'med', brl(i.valor))), 'Tudo aprovado! 💰', true, F.itens.length, 'tickets');
 
   // pipeline em aberto
   const P = N.pipeline, maxEt = Math.max(1, ...P.etapas.map((x) => x.valor));
   $('pip-valor').textContent = N.semDados ? '–' : brl(P.valor);
-  $('pip-sub').textContent = N.semDados ? '' : `${P.quantidade} leads`;
+  $('pip-sub').textContent = N.semDados ? '' : `${P.quantidade} leads no CRM`;
   $('pip-detalhe').textContent = P.quantidade ? `${P.antigos.length} aberto${P.antigos.length === 1 ? '' : 's'} há mais de ${P.limiteDias} dias (${brl(P.valorAntigos)})` : '';
   $('pip-etapas').dataset.total = P.etapas.length; $('pip-etapas').dataset.rotulo = 'etapas';
   $('pip-etapas').replaceChildren(...P.etapas.map((x) => {
