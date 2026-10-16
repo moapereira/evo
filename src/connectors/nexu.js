@@ -10,7 +10,7 @@
 
 import { ler, gravar } from '../armazenamento.js';
 import { congelarDatas, vendasDeTickets, aplicarIgnorar } from '../vendas.js';
-import { financeiroTravado, pipelineAberto, etapaViva } from '../negocio.js';
+import { financeiroTravado, pipelineAberto, etapaViva, datasDeVenda, vendasDoMes, inicioDoMes } from '../negocio.js';
 
 const LIMITE_PAGINA = 100;
 const ETAPAS_FINAIS = new Set(['concluido', 'cancelado']);
@@ -214,12 +214,17 @@ export async function vendas() {
 export async function negocio() {
   return comCache('negocio', async () => {
     const tickets = await ticketsBrutos();
+    // Leads ganhos desde 45 dias antes do início do mês: bastam para achar a data da venda dos tickets do mês.
+    const wonFrom = new Date(inicioDoMes().getTime() - 45 * 24 * 3600 * 1000).toISOString();
+    const ganhos = await listarTudo('/leads', { wonFrom });
+    const datas = datasDeVenda(tickets, ganhos);
     const colunas = (await get('/leads/columns')).items ?? [];
     // Só as etapas vivas do funil (sem Ganho/Perdido/Congelado/No Show): poucas consultas, em vez de varrer todos os leads.
     const abertas = colunas.filter((c) => !c.terminal && etapaViva(c.name)).map((c) => c.name);
     const grupos = await Promise.all(abertas.map((status) => listarTudo('/leads', { status })));
     return {
-      financeiro: financeiroTravado(tickets),
+      financeiro: financeiroTravado(tickets, Date.now(), datas),
+      mes: vendasDoMes(tickets, datas),
       pipeline: pipelineAberto(grupos.flat(), {
         diasAntigo: Number(process.env.LIMITE_LEAD_ANTIGO_DIAS ?? 30),
         ordemEtapas: colunas.map((c) => c.name),
