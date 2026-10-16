@@ -50,3 +50,4 @@ export async function responder(pergunta, estado) {
   const j = await res.json();
   return j.content?.map((c) => c.text ?? '').join('') || resumoLocal(estado);
 }
+ 
