@@ -36,7 +36,8 @@ const origens = {
 
 // Último dado bom de cada fonte: uma falha momentânea não zera o painel.
 const NEGOCIO_VAZIO = {
-  financeiro: { valor: 0, quantidade: 0, maisAntigoDias: 0, itens: [] },
+  financeiro: { valor: 0, quantidade: 0, anteriores: { quantidade: 0, valor: 0 }, maisAntigoDias: 0, itens: [] },
+  mes: null,
   pipeline: { valor: 0, quantidade: 0, etapas: [], antigos: [], valorAntigos: 0, limiteDias: 30 },
 };
 const dados = { vendas: [], tickets: [], funil: [], reunioes: [], negocio: NEGOCIO_VAZIO };
