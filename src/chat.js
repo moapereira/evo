@@ -20,7 +20,8 @@ function resumoLocal(e) {
     ? 'Ainda não consegui ler as reuniões do comercial.'
     : `Reuniões do comercial hoje: ${e.reunioes.realizadas} realizada(s) e ${e.reunioes.agendadas} a seguir, para uma meta de ${e.reunioes.meta}.`);
   if (e.negocio && !e.negocio.semDados) {
-    partes.push(`${brl(e.negocio.financeiro.valor)} aguardando o financeiro (${e.negocio.financeiro.quantidade} tickets) e ${brl(e.negocio.pipeline.valor)} em pipeline, com ${e.negocio.pipeline.antigos.length} lead(s) aberto(s) há mais de ${e.negocio.pipeline.limiteDias} dias.`);
+    if (e.negocio.mes) partes.push(`No mês: ${brl(e.negocio.mes.aprovado.total)} aprovados em ${e.negocio.mes.aprovado.quantidade} vendas (setup ${brl(e.negocio.mes.aprovado.setup)}, recorrência ${brl(e.negocio.mes.aprovado.recorrencia)}).`);
+    partes.push(`${brl(e.negocio.financeiro.valor)} aguardando o financeiro neste mês (${e.negocio.financeiro.quantidade} tickets) e ${brl(e.negocio.pipeline.valor)} em pipeline, com ${e.negocio.pipeline.antigos.length} lead(s) aberto(s) há mais de ${e.negocio.pipeline.limiteDias} dias.`);
   }
   if (e.instancias && !e.instancias.vazio) {
     const z = e.instancias.semMovimento.filter((x) => x.motivo === 'zerado').length;
@@ -50,4 +51,3 @@ export async function responder(pergunta, estado) {
   const j = await res.json();
   return j.content?.map((c) => c.text ?? '').join('') || resumoLocal(estado);
 }
- 
