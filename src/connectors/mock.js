@@ -56,12 +56,18 @@ export async function negocio() {
   const d = (dias) => new Date(Date.now() - dias * 24 * 3600 * 1000).toISOString();
   return {
     financeiro: {
-      valor: 5613, quantidade: 3, maisAntigoDias: 9,
+      valor: 5613, quantidade: 3, anteriores: { quantidade: 0, valor: 0 }, maisAntigoDias: 9,
       itens: [
         { id: 'COM-101', cliente: 'Drogaria Central', tipo: 'novo', setup: 1500, recorrencia: 993, valor: 2493, dias: 9 },
         { id: 'COM-102', cliente: 'Farmácia Vida', tipo: 'upsell', setup: 0, recorrencia: 620, valor: 620, dias: 4 },
         { id: 'COM-103', cliente: 'Rede Saúde', tipo: 'novo', setup: 1500, recorrencia: 1000, valor: 2500, dias: 1 },
       ],
+    },
+    mes: {
+      desde: new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), 1)).toISOString(),
+      aprovado: { quantidade: 12, setup: 9800, recorrencia: 6150, total: 15950 },
+      aguardando: { quantidade: 3, setup: 3000, recorrencia: 2613, total: 5613 },
+      clientesNovos: 5, upsells: 7,
     },
     pipeline: {
       valor: 28400, quantidade: 14, limiteDias: 30, valorAntigos: 10200,
